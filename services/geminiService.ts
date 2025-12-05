@@ -1,68 +1,111 @@
 import { GoogleGenAI } from "@google/genai";
 import { SongRequest, GeneratedSong } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const generateOdiaLyrics = async (request: SongRequest): Promise<GeneratedSong> => {
-  const modelId = "gemini-2.5-flash"; // Using Flash for speed and good creative capability
+  // Initialize the client inside the function to ensure the API key is picked up from the environment at runtime.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const modelId = "gemini-2.5-flash"; 
 
+  // Determine structure based on length
+  let structureConfig = "";
+  if (request.length.includes("Extended") || request.length.includes("6+")) {
+      structureConfig = `
+      **EXTENDED MOVIE SONG STRUCTURE (6+ Minutes):**
+      1. **Title:** Catchy Odia Title.
+      2. **[Chorus]:** 4-6 Lines. Strong Hook. AABB Rhyme. High Energy.
+      3. **[Verse 1]:** 8 Lines. Detailed storytelling. Set the scene clearly.
+      4. **[Chorus Return]:** 2 Lines of Chorus.
+      5. **[Verse 2]:** 8 Lines. Deepen the emotion or conflict.
+      6. **[Bridge]:** 4 Lines. A change in tempo or perspective.
+      7. **[Verse 3]:** 8 Lines. Emotional Climax.
+      8. **[Verse 4]:** 8 Lines. Final resolution or philosophical thought.
+      9. **[Outro]:** 4 Lines. Slow fade out.
+      `;
+  } else if (request.length.includes("Long")) {
+      structureConfig = `
+      **LONG SONG STRUCTURE (5 Minutes):**
+      1. **Title:** Catchy Odia Title.
+      2. **[Chorus]:** 4 Lines. AABB Rhyme.
+      3. **[Verse 1]:** 6-8 Lines. Detailed story.
+      4. **[Chorus Return]:** 2 Lines.
+      5. **[Verse 2]:** 6-8 Lines. Deep emotion.
+      6. **[Verse 3]:** 6-8 Lines. Conclusion.
+      7. **[Outro]:** 4 Lines.
+      `;
+  } else if (request.length.includes("Medium")) {
+      structureConfig = `
+      **MEDIUM SONG STRUCTURE:**
+      1. **Title:** Catchy Odia Title.
+      2. **[Chorus]:** 4 Lines. AABB Rhyme.
+      3. **[Verse 1]:** 4-6 Lines.
+      4. **[Chorus Return]:** 2 Lines.
+      5. **[Verse 2]:** 4-6 Lines.
+      6. **[Outro]:** 2 Lines.
+      `;
+  } else {
+      structureConfig = `
+      **SHORT SONG STRUCTURE:**
+      1. **Title:** Catchy Odia Title.
+      2. **[Chorus]:** 4 Lines. AABB Rhyme.
+      3. **[Verse 1]:** 4-6 Lines.
+      4. **[Outro]:** 2 Lines.
+      `;
+  }
+
+  // Prompt engineering focused on "Legendary Lyricist" persona with strict phonetic & spelling rules
   const prompt = `
-    Role: You are a professional Human Odia Songwriter (not a poet, a modern lyricist). You write raw, emotional, and catchy songs. You strictly avoid "AI-style" stiff language. You hate bookish words.
+    You are the AI incarnation of legendary Odia Lyricists like **Arun Mantri**, **Nirmala Nayak**, and **Abhijit Majumdar**.
+    Your task is to write a BLOCKBUSTER OLLYWOOD SONG that sounds authentic, emotional, and professionally composed.
 
-    Task: Write a complete song in **Odia Script** (Odia Language) about "${request.topic}".
+    **CRITICAL RULES FOR QUALITY (DO NOT IGNORE):**
 
-    Context:
-    - Mood (Emotion): ${request.mood}
-    - Genre (Style): ${request.genre}
+    1. **FORMATTING & LANGUAGE:**
+       - **LABELS:** Use **ENGLISH** labels only (e.g., **[Chorus]**, **[Verse 1]**, **[Bridge]**, **[Outro]**).
+       - **NO INDIC TERMS:** Do NOT use words like 'Mukhra', 'Antara', or 'Sanchari'.
+       - **SCRIPT:** The lyrics content MUST be in **PURE ODIA SCRIPT (ଓଡ଼ିଆ ଲିପି)**.
+       - **NO ROMAN ODIA:** Do NOT write lyrics in English letters (e.g., "Mu jauchi" is BANNED).
+       - ✅ Example Label: **[Chorus]**
+       - ✅ Example Lyric: **ତୁମେ ଆସିଲ ବେଳେ ମନ ମୋର ନାଚେ...**
+
+    2. **PERFECT RHYMING (ANTYA MILANA):**
+       - **Rule:** The song MUST be singable. Lines must have a similar syllable count (Meter).
+       - **Rhyme Scheme:** Use **AABB** strictly for the [Chorus].
+       - **Phonetics:** The ending **VOWEL SOUND** must match exactly.
+         - ❌ Bad: "Katha... / Hrudaya..." ('tha' and 'ya' do not rhyme well).
+         - ✅ Good: "Katha... / Byatha..." (Perfect match).
+       - **Correction Strategy:** If you write a line, and the next line doesn't rhyme perfectly, DELETE IT and write a new line that rhymes.
+
+    3. **CORRECT SPELLING & GRAMMAR (SHUDDHA ODIA):**
+       - **Matra Fixes:** 
+         - Use correct verb endings. 'ମୁଁ ଯାଉଛି' (Continuous), not 'ମୁଁ ଯାଇଛି' (Perfect) unless intended.
+         - Watch 'i' vs 'ii' (ି vs ୀ) and 'u' vs 'uu' (ୁ vs ୂ).
+       - **Pronunciation:** Write words as they are pronounced in songs.
+       - **Sentence Logic:** Complete the sentence. Don't leave it hanging.
+
+    4. **LYRICIST PERSONA & STYLE:**
+       - **If Romantic:** Use soft, poetic words like *Janha, Phula, Sagara, Nida, Swapna, Akhi*. Be emotional.
+       - **If Sad:** Use deep words like *Luha, Koha, Chhati Fata, Smruti, Jala, Sunya*.
+       - **If Dance/Folk:** Use energetic, desi words like *Toka, Toki, Halchal, Bawal, Mui, Tui, Rani*.
+       - **Logic:** Think like a movie scene. Visualize the actor singing.
+
+    5. **CONTEXTUAL WORD BANK (NO ROBOTIC WORDS):**
+       - Use: *Dhana, Suna, Jibana, Sathi, Manara Katha, Prema Chadhei*.
+       - **BANNED:** 'Network', 'Computer', 'Link', 'Database', 'System'.
+       - **BANNED:** Direct translation of English idioms. Use Odia 'Rudhi' (Idioms).
+
+    **SONG REQUEST DETAILS:**
+    - Topic: "${request.topic}"
+    - Mood: ${request.mood}
+    - Genre: ${request.genre}
     - Length: ${request.length}
 
-    *** 1. STRICT RHYMING LOGIC (AABB SCHEME) - PERFECT RHYMES ONLY ***
-    You MUST follow the AABB rhyming scheme. 
-    - **Line 1 & 2**: MUST rhyme perfectly at the end.
-    - **Line 3 & 4**: MUST rhyme perfectly at the end.
-    - **Phonetic Matching**: The last syllables must sound EXACTLY the same.
-      - ✅ Correct: "Dure" - "Jhure" (Matches 'ure')
-      - ✅ Correct: "Mana" - "Bana" (Matches 'ana')
-      - ❌ Wrong: "Katha" - "Pai" (No match)
-    
-    *** 2. ULTRA-LOGICAL FLOW & COUPLET UNITY (CRITICAL) ***
-    Every two lines (the rhyming pair) must form ONE COMPLETE THOUGHT. They cannot be random sentences.
-    - **Couplet Logic**: 
-      - ❌ BAD: "The sky is blue (Akasha Nila)" / "I eat an apple (Khauchi Phala)". -> (Rhymes but NO LOGIC).
-      - ✅ GOOD: "Since you went far away (Tu Galu Dura)" / "My heart is only crying more (Kanduchi Mora)". -> (Connected Logical Thought).
-    - **Conversation Style**: Write exactly like a person speaks. Line 2 should often complete the sentence started in Line 1.
-    - **Story Progression**:
-      - Verse 1: Introduction (What is the situation?)
-      - Chorus: The Main Emotion/Hook (The core message).
-      - Verse 2: Deepening the feeling or conflict.
-      - Outro: Final conclusion.
+    **OUTPUT FORMAT:**
+    ${structureConfig}
 
-    *** 3. GENRE-SPECIFIC VOCABULARY & STYLE ***
-    - **Ollywood Commercial / Pop**: Modern, conversational Odia (Chalti Odia). Trendy.
-    - **Sambalpuri**: Use authentic Sambalpuri/Kosli dialect keywords (Mui, Tui, Rani, Darling). Rhythmic.
-    - **Bhajana**: Use pure, spiritual words (Prabhu, Bhakti, Charana). Respectful.
-    - **Item Song**: Dance slang, catchy hooks, teasing lyrics.
-    - **Rap / Hip-Hop**: Street slang, fast flow, aggressive or punchy words.
-    - **Lofi**: Simple, soft, relaxing, poetic but modern words.
-    - **Ghazal**: Deep Urdu-influenced Odia or pure poetic Odia.
-    - **Jatra**: Dramatic, high-pitch, dialogue-heavy storytelling words.
-    - **Classic**: Standard literary Odia, polite and melodious.
-
-    *** 4. HUMAN TOUCH & VOCABULARY (CRITICAL) ***
-    - **NO ROBOTIC / AI LANGUAGE**: Do not use formal, stiff, or "translated" text. The lyrics must sound like a real person talking.
-    - **NO "CLASSIC" / BOOKISH WORDS**: Unless the genre is 'Classic' or 'Bhajana', DO NOT use formal literary words (like 'Bichitra', 'Kimbaba', 'Byathita'). Use words young people use (like 'Khel', 'Pila', 'Dil', 'Mast').
-    - **CONVERSATIONAL TONE**: Write as if you are talking to a friend or lover. Use slang, idioms, and natural expressions.
-    - **EMOTION OVER DESCRIPTION**: Don't say "I am feeling sad". Say "My heart is breaking into pieces". Show, don't tell.
-
-    *** 5. STRUCTURE ***
-    - Use clear English labels: [Title], [Verse 1], [Chorus], [Verse 2], [Bridge], [Outro].
-    - Give the song a catchy **Title** in Odia at the top.
-    
-    *** 6. GRAMMAR & PRONUNCIATION (Natural Flow) ***
-    - Ensure the sentence structure follows NATIVE Odia grammar (Subject-Object-Verb).
-    - The lyrics must be "Singable". Read it internally to check the meter and rhythm.
-
-    Output ONLY the lyrics in Odia script (with structural labels in English).
+    **FINAL CHECK:** 
+    - Are the labels [Chorus]/[Verse]? YES.
+    - Is the script Odia? YES.
+    - Is Roman Odia removed? YES.
   `;
 
   try {
@@ -70,23 +113,18 @@ export const generateOdiaLyrics = async (request: SongRequest): Promise<Generate
       model: modelId,
       contents: prompt,
       config: {
-        temperature: 0.7, // Lowered slightly to improve logical coherence and rhyming strictness
+        temperature: 0.7, 
         topK: 40,
-        topP: 0.95,
+        topP: 0.90,
       }
     });
 
     const text = response.text;
     if (!text) throw new Error("No content generated");
 
-    // Simple parsing to extract a title if possible, otherwise use the topic
+    // Extract title or use default
     const lines = text.split('\n');
-    let title = lines[0]?.replace(/^#|\*/g, '').trim() || request.topic;
-    
-    // Cleanup title if it starts with "Title:"
-    if (title.toLowerCase().startsWith('title:')) {
-      title = title.substring(6).trim();
-    }
+    let title = lines[0]?.replace(/^#|\*|Title:/g, '').trim() || request.topic;
     
     return {
       id: crypto.randomUUID(),
@@ -95,8 +133,11 @@ export const generateOdiaLyrics = async (request: SongRequest): Promise<Generate
       createdAt: Date.now(),
       metadata: request
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
+    if (error.status === 403 || (error.message && error.message.includes("PERMISSION_DENIED"))) {
+        throw new Error("API Permission Denied. Please check if your API Key is valid and has access to the model.");
+    }
     throw new Error("Failed to generate lyrics. Please try again.");
   }
 };

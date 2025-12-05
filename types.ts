@@ -43,7 +43,8 @@ export enum Genre {
 export enum SongLength {
   SHORT = 'Short (1-2 mins)',
   MEDIUM = 'Medium (3-4 mins)',
-  LONG = 'Long (5+ mins)',
+  LONG = 'Long (5 mins)',
+  EXTENDED = 'Extended (6+ mins)',
 }
 
 export interface GenerationState {
