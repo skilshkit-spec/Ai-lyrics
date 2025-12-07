@@ -3,6 +3,7 @@ import { SongRequest, GeneratedSong } from "../types";
 
 export const generateOdiaLyrics = async (request: SongRequest): Promise<GeneratedSong> => {
   // Initialize the client inside the function to ensure the API key is picked up from the environment at runtime.
+  // The API key must be obtained exclusively from the environment variable `process.env.API_KEY`.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelId = "gemini-2.5-flash"; 
 
